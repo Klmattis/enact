@@ -34,8 +34,9 @@ contract Referendum {
     uint public creationTime;
     bool public openToPublic;
     bool public completed;
+    bool public approved;
     mapping (address => bool) hasVoted;
-    mapping (address => uint) voterId;
+    mapping (address => string) voterId;
     Voter[] approvedVoters;
     
     struct Voter {
@@ -45,12 +46,13 @@ contract Referendum {
     
     event NewApprovedVoter(address voterAddress, string name);
     event Voted(address voterAddress, string name);
+    event Closed(address contractAddress, bool approved);
     
     // Modifier to ensure only approved voters may continue if not public, and that person has not yet voted
     modifier onlyApprovedVoters() {
         require(hasVoted[msg.sender] == false);
-        if(openToPublic) {
-            require(voterId[msg.sender] != 0);
+        if(!openToPublic) {
+            require(keccak256(abi.encodePacked(voterId[msg.sender])) != keccak256(abi.encodePacked("")));
         }
         _;
     }
@@ -84,7 +86,7 @@ contract Referendum {
         votesAgainst = 0;
         openToPublic = false;
         completed = false;
-        creationTime = now;
+        approved = false;
     }
     
     // Voting function, 0 = vote against, 1 = vote for
@@ -99,27 +101,11 @@ contract Referendum {
     
     // Adds an approved voter and assigns voterId
     function addVoter(address _voterAddress, string _name) external onlyOwner {
-        uint id = voterId[_voterAddress];
-        if (id == 0) {
-            voterId[_voterAddress] = approvedVoters.length;
-            id = approvedVoters.length++;
-        }
-
+        voterId[_voterAddress] = _name;
+        
+        uint id = approvedVoters.length++;
         approvedVoters[id] = Voter({voterAddress: _voterAddress, name: _name});
         emit NewApprovedVoter(_voterAddress, _name);
-    }
-    
-    // Removes an approved voter and unsassigns voterId
-    function removeVoter(address _voterAddress) external onlyOwner {
-        require(voterId[_voterAddress] != 0);
-
-        for (uint i = voterId[_voterAddress]; i<approvedVoters.length-1; i++){
-            approvedVoters[i] = approvedVoters[i+1];
-            voterId[approvedVoters[i].voterAddress] = i;
-        }
-        voterId[_voterAddress] = 0;
-        delete approvedVoters[approvedVoters.length-1];
-        approvedVoters.length--;
     }
     
     // Allows owner to open or close vote to public
@@ -137,9 +123,30 @@ contract Referendum {
     function getApprovedVotersCount() view external returns (uint) {
         return approvedVoters.length;
     }
-    
+
+    // Sets the referendum to closed
     function closeReferendum() external onlyOwner {
         completed = true;
+        if (votesFor > votesAgainst) {
+           approved = true; 
+        }
+        emit Closed(this, approved);
+    }
+
+    // Gets the summary of the referendum   
+    function getSummary() public view returns (address, string, string, uint, uint, uint, uint, bool, bool, bool) {
+        return (
+            owner,
+            title,
+            description,
+            startingDatetime,
+            endingDatetime,
+            votesFor,
+            votesAgainst,
+            openToPublic,
+            completed,
+            approved
+        );
     }
 
 }
