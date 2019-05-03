@@ -94,7 +94,7 @@ contract Referendum {
         if(_vote) {
             votesFor++;
         } else {
-            votesAgainst = votesAgainst++;
+            votesAgainst++;
         }
         hasVoted[msg.sender] = true;
     }
@@ -125,7 +125,7 @@ contract Referendum {
     }
 
     // Sets the referendum to closed
-    function closeReferendum() external onlyOwner {
+    function closeReferendum() external onlyOwner onlyAfterVotingTime {
         completed = true;
         if (votesFor > votesAgainst) {
            approved = true; 
