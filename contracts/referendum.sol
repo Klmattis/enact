@@ -1,4 +1,4 @@
-///@title Campaign Smart Contract v1.0
+///@title Referendum Smart Contract v1.0
 ///@author Keith Mattison
 
 pragma solidity ^0.4.25;
